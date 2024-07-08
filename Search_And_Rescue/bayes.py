@@ -6,7 +6,7 @@ import cv2 as cv
 
 MAP_FILE = 'cape_python.png'
 
-SA1_CORNERS = (130,265,180,315)
+SA1_CORNERS = (130,265,180,315) #(UL-X, UL-Y, LR-X, LR-Y)
 SA2_CORNERS = (80,255,130,305)
 SA3_CORNERS = (105,205,155,255)
 
@@ -37,7 +37,7 @@ class Search():
         self.sep2 = 0
         self.sep3 = 0
 
-    def draw_map(self,last_known):
+    def draw_map(self,last_known,sailor_x=None,sailor_y=None):
         #Displays base map with scale, last known xy pos, & search areas
         cv.line(self.img, (20,370), (70,370), (0,0,0),2)
         cv.putText(self.img, '0', (8, 370), cv.FONT_HERSHEY_PLAIN, 1, (0,0,0))
@@ -47,7 +47,7 @@ class Search():
         cv.rectangle(self.img, (SA1_CORNERS[0], SA1_CORNERS[1]),
                      (SA1_CORNERS[2], SA1_CORNERS[3]), (0,0,0), 1)
         cv.putText(self.img, '1', 
-                   (SA1_CORNERS[0], + 3, SA1_CORNERS[1] + 15),
+                   (SA1_CORNERS[0] + 3, SA1_CORNERS[1] + 15),
                    cv.FONT_HERSHEY_PLAIN, 1, 0)
         cv.rectangle(self.img, (SA2_CORNERS[0], SA2_CORNERS[1]),
                      (SA2_CORNERS[2], SA2_CORNERS[3]), (0,0,0), 1)
@@ -58,7 +58,7 @@ class Search():
                      (SA3_CORNERS[2], SA3_CORNERS[3]), (0,0,0), 1)
         cv.putText(self.img, '3',
                    (SA3_CORNERS[0] + 3, SA3_CORNERS[1] + 15),
-                   (cv.FONT_HERSHEY_PLAIN), 1, 0)
+                   cv.FONT_HERSHEY_PLAIN, 1, (0,0,0))
         
         cv.putText(self.img, '+', (last_known),
                    cv.FONT_HERSHEY_PLAIN, 1, (0,0,255))
@@ -67,8 +67,12 @@ class Search():
         cv.putText(self.img, '* = Actual Position', (275, 370),
                    cv.FONT_HERSHEY_PLAIN, 1, (255,0,0))
         
+        cv.circle(self.img, (sailor_x, sailor_y), 3, (255,0,0), -1)
+        cv.drawMarker(self.img, (sailor_x, sailor_y), (0,255,0), 
+                        markerType=cv.MARKER_STAR, markerSize=15, thickness=2)
+        
         cv.imshow('Search Area', self.img)
-        cv.moveWindow('Search Area', 750, 10)
+        cv.moveWindow('Search Area', 2000, 10)
         cv.waitKey(500)
     
     def sailor_final_location(self, num_search_areas):
@@ -89,7 +93,7 @@ class Search():
         elif area == 3:
             x = self.sailor_actual[0] + SA3_CORNERS[0]
             y = self.sailor_actual[1] + SA3_CORNERS[1]
-            self.area_actual = 3coords_1
+            self.area_actual = 3
         return x,y
     
     def calc_search_effectiveness(self):
@@ -187,6 +191,39 @@ def main():
         else:
             print("\nInvalid Input Entered", file=sys.stderr)
             continue
+    
+        app.revise_target_probs()
+
+        print("\nSearch {} Results 1 = {}"
+              .format(search_num, results_1), file=sys.stderr)
+        print("Search {} Results 2 = {}\n"
+              .format(search_num, results_2), file=sys.stderr)
+        print("Search {} Effectiveness (E):".format(search_num))
+        print("E1 = {:.3f}, E2 = {:.3f}, E3 = {:.3f}"
+              .format(app.sep1, app.sep2, app.sep3))
+        
+        if results_1 == 'Not Found' and results_2 == 'Not Found':
+            print("\nNew Target Probabilities (P) for Search {}:"
+                  .format(search_num + 1))
+            print("P1 = {:.3f}, P2 = {:.3f}, P3 = {:.3f}"
+                  .format(app.p1, app.p2, app.p3))
+            search_num+=1
+
+        if search_num == 2 and results_1 == 'Not Found' and results_2 == 'Not_Found':
+            cv.putText(app.img, 'Sailor Lost', (70,350), 
+            cv.FONT_HERSHEY_COMPLEX, 2, (0,0,255), 8)
+            app.draw_map(last_known=(160,290), sailor_x=sailor_x, sailor_y=sailor_y)
+            cv.waitKey(1500)
+            main()
+
+        if 'Found' in results_1 or 'Found' in results_2:
+            cv.waitKey(1500)
+            main()
+        
+        print(search_num)
+if __name__ == '__main__':
+    main()
+        
 
 
 
